@@ -1,8 +1,9 @@
+'use client';
+
 import { useState, useEffect } from 'react'
-import Head from 'next/head'
 import { Download, Trash2, Package } from 'lucide-react'
-import EcoScoreCard from '../components/EcoScoreCard'
-import { BulkScanner } from '../components/BulkScanner'
+import EcoScoreCard from '../../components/EcoScoreCard'
+import { BulkScanner } from '../../components/BulkScanner'
 
 export default function BulkScan() {
   const [scannedProducts, setScannedProducts] = useState([])
@@ -88,11 +89,6 @@ export default function BulkScan() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
-      <Head>
-        <title>Bulk Scan - EcoSnap AI</title>
-        <meta name="description" content="Scan multiple products at once for comprehensive eco analysis" />
-      </Head>
-
       <div className="container mx-auto px-4 py-8">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-800 mb-4">

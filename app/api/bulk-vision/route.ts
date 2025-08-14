@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { NextRequest, NextResponse } from 'next/server';
 
 const getValidImage = async (file) => {
   // Check if it's actually an image
@@ -28,40 +29,19 @@ const getValidImage = async (file) => {
   };
 };
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
-export default async function handler(req, res) {
-  // Set CORS headers
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
-
-  // Handle preflight request
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
+export async function POST(request: NextRequest) {
   try {
-    const form = await req.formData();
+    const form = await request.formData();
     const files = form.getAll('files');
 
     if (!files || files.length === 0) {
-      return res.status(400).json({ error: 'No files provided' });
+      return NextResponse.json({ error: 'No files provided' }, { status: 400 });
     }
 
     // Check if API key is available
-    const apiKey = process.env.GEMINI_API_KEY
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return res.status(500).json({ error: 'API key not configured' })
+      return NextResponse.json({ error: 'API key not configured' }, { status: 500 });
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
@@ -102,10 +82,12 @@ Analyze this product and provide a comprehensive eco-friendly assessment. Return
   ]
 }
 
-Focus on sustainability, environmental impact, packaging, carbon footprint, and suggest better eco-friendly alternatives if applicable.`
+Focus on sustainability, environmental impact, packaging, carbon footprint, and suggest better eco-friendly alternatives if applicable.
+Ensure all numeric values are reasonable and within their expected ranges.`;
 
-    const results = []
+    const results = [];
 
+    // Process files sequentially to avoid rate limiting
     for (const file of files) {
       try {
         // Validate and process the image
@@ -149,13 +131,13 @@ Focus on sustainability, environmental impact, packaging, carbon footprint, and 
       }
     }
 
-    return res.status(200).json({ results })
+    return NextResponse.json({ results });
 
   } catch (error) {
     console.error('Bulk analysis error:', error);
-    return res.status(500).json({ 
+    return NextResponse.json({ 
       error: 'Error processing images',
       details: error.message 
-    });
+    }, { status: 500 });
   }
 }

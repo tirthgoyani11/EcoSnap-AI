@@ -141,18 +141,6 @@ export function BulkScanner({ onResults }: BulkScannerProps) {
           {error}
         </div>
       )}
-
-      <div className="space-y-4">
-        {results.map((result, index) => (
-          <div 
-            key={index}
-            className="bg-white shadow rounded-lg p-4 border border-gray-200"
-          >
-            <h3 className="font-medium text-gray-900">{result.filename}</h3>
-            <p className="mt-2 text-gray-600 whitespace-pre-wrap">{result.analysis}</p>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
