@@ -1,34 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react'
+import Head from 'next/head'
 import { Download, Trash2, Package } from 'lucide-react'
-import EcoScoreCard from '../../components/EcoScoreCard.tsx'
-import { BulkScanner } from '../../components/BulkScanner'
+import EcoScoreCard from '../components/EcoScoreCard'
+import { BulkScanner } from '../components/BulkScanner'
 
 export default function BulkScan() {
-  interface Product {
-    id: number;
-    productName: string;
-    brand: string;
-    category: string;
-    ecoScore: number;
-    packagingScore: number;
-    carbonScore: number;
-    ingredientScore: number;
-    certificationScore: number;
-    recyclable: boolean;
-    co2Impact: number;
-    healthScore: number;
-    certifications: string[];
-    ecoDescription: string;
-  }
-
-  const [scannedProducts, setScannedProducts] = useState<Product[]>([])
+  const [scannedProducts, setScannedProducts] = useState([])
   const [totalEcoScore, setTotalEcoScore] = useState(0)
   const [totalCO2Impact, setTotalCO2Impact] = useState(0)
 
   // Handle results from BulkScanner
-  const handleScanResults = (results: any[]) => {
+  const handleScanResults = (results) => {
     if (!results || !Array.isArray(results)) return
     
     const newProducts = results.map(result => ({
@@ -56,7 +40,7 @@ export default function BulkScan() {
   }, [scannedProducts])
 
   // Remove product
-  const removeProduct = (id: number) => {
+  const removeProduct = (id) => {
     setScannedProducts(prev => prev.filter(product => product.id !== id))
   }
 
@@ -71,12 +55,12 @@ export default function BulkScan() {
       ['Product Name', 'Brand', 'Category', 'Eco Score', 'CO2 Impact', 'Health Score'].join(','),
       ...scannedProducts.map(product => 
         [
-          product.productName || '',
-          product.brand || '',
-          product.category || '',
-          product.ecoScore || 0,
-          product.co2Impact || 0,
-          product.healthScore || 0
+          product.productName,
+          product.brand,
+          product.category,
+          product.ecoScore,
+          product.co2Impact,
+          product.healthScore
         ].join(',')
       )
     ].join('\n')
@@ -90,14 +74,14 @@ export default function BulkScan() {
     window.URL.revokeObjectURL(url)
   }
 
-  const getScoreColor = (score: number): string => {
+  const getScoreColor = (score) => {
     if (score >= 80) return 'text-green-600'
     if (score >= 60) return 'text-yellow-600'
     if (score >= 40) return 'text-orange-600'
     return 'text-red-600'
   }
 
-  const getScoreIcon = (score: number): string => {
+  const getScoreIcon = (score) => {
     if (score >= 80) return '🌱'
     if (score >= 60) return '♻️'
     if (score >= 40) return '🌿'
@@ -106,6 +90,11 @@ export default function BulkScan() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
+      <Head>
+        <title>Bulk Scan - EcoSnap AI</title>
+        <meta name="description" content="Scan multiple products at once for comprehensive eco analysis" />
+      </Head>
+
       <div className="container mx-auto px-4 py-8">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-800 mb-4">
