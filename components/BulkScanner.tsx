@@ -5,11 +5,42 @@ import { Upload, Loader2 } from 'lucide-react';
 
 interface ScanResult {
   filename: string;
-  analysis: string;
+  analysis: {
+    productName: string;
+    brand: string;
+    category: string;
+    ecoScore: number;
+    packagingScore: number;
+    carbonScore: number;
+    ingredientScore: number;
+    certificationScore: number;
+    recyclable: boolean;
+    co2Impact: number;
+    healthScore: number;
+    certifications: string[];
+    ecoDescription: string;
+    alternatives: Array<{
+      name: string;
+      brand: string;
+      ecoScore: number;
+      price: number;
+      co2Impact: number;
+      rating: number;
+      whyBetter: string;
+      benefits: string[];
+      improvements: {
+        co2Reduction: number;
+        betterScore: number;
+      };
+    }>;
+  };
 }
 
-export function BulkScanner() {
-  const [results, setResults] = useState<ScanResult[]>([]);
+interface BulkScannerProps {
+  onResults: (results: ScanResult[]) => void;
+}
+
+export function BulkScanner({ onResults }: BulkScannerProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -22,22 +53,24 @@ export function BulkScanner() {
     const formData = new FormData();
     
     Array.from(e.target.files).forEach(file => {
-      formData.append('files', file);
+      if (file instanceof File) {
+        formData.append('files', file);
+      }
     });
 
     try {
-      const response = await fetch('/api/scan', {
+      const response = await fetch('/api/bulk-vision', {
         method: 'POST',
         body: formData,
       });
 
       if (!response.ok) {
-        throw new Error('Failed to process images');
+        throw new Error(`Failed to process images: ${response.status}`);
       }
 
       const data = await response.json();
       if (data.results) {
-        setResults(data.results);
+        onResults(data.results);
       }
     } catch (error) {
       console.error('Error during bulk scan:', error);
