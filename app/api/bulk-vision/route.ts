@@ -1,7 +1,38 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
 
-const getValidImage = async (file) => {
+interface UploadedFile extends File {
+  type: string;
+  arrayBuffer(): Promise<ArrayBuffer>;
+  name: string;
+}
+
+interface ValidationResult {
+  data: string;
+  mimeType: string;
+}
+
+interface ScanResult {
+  filename: string;
+  analysis?: {
+    productName: string;
+    brand: string;
+    category: string;
+    ecoScore: number;
+    packagingScore: number;
+    carbonScore: number;
+    ingredientScore: number;
+    certificationScore: number;
+    recyclable: boolean;
+    co2Impact: number;
+    healthScore: number;
+    certifications: string[];
+    ecoDescription: string;
+  };
+  error?: string;
+}
+
+const getValidImage = async (file: UploadedFile): Promise<ValidationResult> => {
   // Check if it's actually an image
   if (!file.type.startsWith('image/')) {
     throw new Error('Invalid file type. Please upload an image.');
@@ -32,9 +63,10 @@ const getValidImage = async (file) => {
 export async function POST(request: NextRequest) {
   try {
     const form = await request.formData();
-    const files = form.getAll('files');
+    const formFiles = form.getAll('files');
+    const files = formFiles.filter((file): file is UploadedFile => file instanceof File);
 
-    if (!files || files.length === 0) {
+    if (files.length === 0) {
       return NextResponse.json({ error: 'No files provided' }, { status: 400 });
     }
 
@@ -48,96 +80,90 @@ export async function POST(request: NextRequest) {
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro-vision" });
 
     const prompt = `
-Analyze this product and provide a comprehensive eco-friendly assessment. Return the response in valid JSON format with the following structure:
+You are an AI trained to analyze product images and assess their environmental impact. For each image:
 
+1. Identify the product name and brand
+2. Determine product category
+3. Analyze and score (0-100) these aspects:
+   - Overall eco-friendliness
+   - Packaging sustainability
+   - Carbon footprint impact
+   - Ingredient/material sustainability
+   - Eco certifications present
+4. Determine if packaging is recyclable
+5. Estimate CO2 impact in kg
+6. Calculate health impact score
+7. List any eco-certifications
+8. Provide a brief eco-analysis 
+
+Please be as accurate as possible. Prioritize facts and details visible in the image.
+
+Return only JSON format with this exact structure (numbers should be 0-100 except CO2):
 {
-  "productName": "Product name",
-  "brand": "Brand name", 
-  "category": "Product category",
-  "ecoScore": 85,
-  "packagingScore": 90,
-  "carbonScore": 80,
-  "ingredientScore": 85,
-  "certificationScore": 75,
-  "recyclable": true,
-  "co2Impact": 1.2,
-  "healthScore": 88,
-  "certifications": ["USDA Organic", "Fair Trade"],
-  "ecoDescription": "Detailed explanation of environmental impact",
-  "alternatives": [
-    {
-      "name": "Alternative product name",
-      "brand": "Brand",
-      "ecoScore": 92,
-      "price": 15.99,
-      "co2Impact": 0.8,
-      "rating": 4.5,
-      "whyBetter": "Explanation of why it's better",
-      "benefits": ["Benefit 1", "Benefit 2"],
-      "improvements": {
-        "co2Reduction": 30,
-        "betterScore": 15
-      }
-    }
-  ]
-}
+  "productName": "",
+  "brand": "",
+  "category": "",
+  "ecoScore": 0,
+  "packagingScore": 0,
+  "carbonScore": 0,
+  "ingredientScore": 0, 
+  "certificationScore": 0,
+  "recyclable": true/false,
+  "co2Impact": 0.0,
+  "healthScore": 0,
+  "certifications": [],
+  "ecoDescription": ""
+}`;
 
-Focus on sustainability, environmental impact, packaging, carbon footprint, and suggest better eco-friendly alternatives if applicable.
-Ensure all numeric values are reasonable and within their expected ranges.`;
+    const results: ScanResult[] = [];
+    const errors: ScanResult[] = [];
 
-    const results = [];
-
-    // Process files sequentially to avoid rate limiting
+    // Process each image
     for (const file of files) {
       try {
-        // Validate and process the image
         const image = await getValidImage(file);
         
-        const imageParts = [
+        const result = await model.generateContent([
+          prompt,
           {
             inlineData: {
               data: image.data,
               mimeType: image.mimeType
             }
           }
-        ];
+        ]);
 
-        const result = await model.generateContent([prompt, ...imageParts]);
         const response = await result.response;
-        let text = response.text();
-
-        // Clean up the response to extract JSON
-        text = text.replace(/```json\n?/, '').replace(/```\n?$/, '').trim();
-        const analysis = JSON.parse(text);
-
-        // Validate critical fields
-        if (!analysis.productName || !analysis.ecoScore || !analysis.co2Impact) {
-          throw new Error('Invalid analysis result');
+        const text = response.text();
+        
+        try {
+          const analysis = JSON.parse(text);
+          results.push({
+            filename: file.name,
+            analysis
+          });
+        } catch (parseError) {
+          throw new Error('Failed to parse analysis result');
         }
-
-        results.push({
-          filename: file.name,
-          analysis
-        });
-
-        // Add a small delay between requests to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (error) {
-        console.error(`Error processing file ${file.name}:`, error);
-        results.push({
+        const errorMessage = error instanceof Error ? error.message : 'Failed to process image';
+        errors.push({
           filename: file.name,
-          error: error.message || 'Failed to process this image'
+          error: errorMessage
         });
       }
     }
 
-    return NextResponse.json({ results });
-
+    return NextResponse.json({
+      results,
+      errors,
+      timestamp: new Date().toISOString()
+    });
   } catch (error) {
-    console.error('Bulk analysis error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     return NextResponse.json({ 
-      error: 'Error processing images',
-      details: error.message 
+      error: 'Failed to process request',
+      details: errorMessage
     }, { status: 500 });
   }
 }

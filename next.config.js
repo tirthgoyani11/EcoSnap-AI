@@ -5,9 +5,7 @@ const nextConfig = {
   images: {
     domains: ['images.openfoodfacts.org', 'world.openfoodfacts.org'],
   },
-  experimental: {
-    appDir: false
-  }
+  // App Router is enabled by default now
 }
 
 module.exports = nextConfig
