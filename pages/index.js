@@ -1,16 +1,25 @@
 import { useState, useEffect } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { Camera, Upload, Search, Zap, Leaf, Trophy, User, Menu } from 'lucide-react'
-import CameraScanner from '../components/CameraScanner'
 import EcoTipOfTheDay from '../components/EcoTipOfTheDay'
 import confetti from 'canvas-confetti'
 
+// Dynamically import Scanner with SSR disabled
+const Scanner = dynamic(() => import('../components/Scanner'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex justify-center items-center p-8">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+    </div>
+  )
+})
+
 export default function Home() {
-  const [scanMode, setScanMode] = useState('camera')
   const [ecoPoints, setEcoPoints] = useState(0)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
-  const [scannedProduct, setScannedProduct] = useState(null)
+  const [scanResult, setScanResult] = useState('')
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -32,6 +41,17 @@ export default function Home() {
         colors: ['#22c55e', '#3b82f6', '#8b5cf6']
       })
     }
+  }
+
+  const handleScanResult = (result) => {
+    setScanResult(result)
+    // Award points for successful scan
+    addEcoPoints(10)
+    console.log('Scan result:', result)
+  }
+
+  const handleScanError = (error) => {
+    console.error('Scan error:', error)
   }
 
   const NavButton = ({ icon: Icon, label, href, onClick }) => (
@@ -62,7 +82,7 @@ export default function Home() {
             <Leaf className="text-white text-2xl" />
             <h1 className="text-white text-xl font-bold">EcoSnap AI</h1>
           </div>
-          
+
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-6">
             <NavButton icon={Camera} label="Scanner" href="/" />
@@ -102,38 +122,20 @@ export default function Home() {
         {/* Eco Tip of the Day */}
         <EcoTipOfTheDay />
 
-        {/* Scan Mode Selection */}
-        <div className="eco-card p-6 mb-6 max-w-md mx-auto">
-          <h2 className="text-lg font-bold text-gray-800 mb-4 text-center">Choose Scan Mode</h2>
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { mode: 'camera', icon: Camera, label: 'Live Scan' },
-              { mode: 'upload', icon: Upload, label: 'Upload Photo' },
-              { mode: 'search', icon: Search, label: 'Text Search' }
-            ].map(({ mode, icon: Icon, label }) => (
-              <button
-                key={mode}
-                onClick={() => setScanMode(mode)}
-                className={`flex flex-col items-center p-3 rounded-lg transition-all duration-200 ${
-                  scanMode === mode
-                    ? 'bg-green-500 text-white shadow-lg'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                <Icon size={20} className="mb-1" />
-                <span className="text-xs font-medium">{label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* Scanner Section */}
+        <div className="eco-card p-6 mb-6 max-w-2xl mx-auto">
+          <h2 className="text-lg font-bold text-gray-800 mb-4 text-center">QR Code & Barcode Scanner</h2>
+          
+          {/* Scanner Component */}
+          <Scanner onResult={handleScanResult} onError={handleScanError} />
 
-        {/* Scanner Component */}
-        <div className="max-w-2xl mx-auto">
-          <CameraScanner
-            mode={scanMode}
-            onScanResult={setScannedProduct}
-            onEcoPointsEarned={addEcoPoints}
-          />
+          {/* Scan Result Display */}
+          {scanResult && (
+            <div className="mt-6 p-4 bg-green-100 border border-green-300 rounded-lg">
+              <h3 className="font-medium text-green-800 mb-2">Scan Result:</h3>
+              <p className="text-green-700 font-mono text-sm break-all">{scanResult}</p>
+            </div>
+          )}
         </div>
 
         {/* Quick Actions */}
@@ -143,6 +145,7 @@ export default function Home() {
               <span className="text-sm font-medium">🛒 Bulk Scan</span>
             </button>
           </Link>
+          
           <Link href="/ask-anything">
             <button className="eco-button w-full py-3">
               <span className="text-sm font-medium">💭 Ask AI</span>
