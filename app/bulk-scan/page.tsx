@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Download, Trash2, Package } from 'lucide-react'
-import EcoScoreCard from '../../components/EcoScoreCard.tsx'
+import EcoScoreCard from '../../components/EcoScoreCard'
 import { BulkScanner } from '../../components/BulkScanner'
 
 export default function BulkScan() {

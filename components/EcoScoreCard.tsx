@@ -21,6 +21,7 @@ interface Product {
 interface EcoScoreCardProps {
   product: Product;
   onRemove?: () => void;
+  key?: React.Key;
 }
 
 interface ScoreBreakdownProps {
