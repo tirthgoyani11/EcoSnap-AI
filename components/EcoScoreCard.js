@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { ChevronDown, ChevronUp, Leaf, Recycle, Heart, Award } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
 
 export default function EcoScoreCard({ product }) {
   const [expanded, setExpanded] = useState(false)
@@ -42,11 +41,7 @@ export default function EcoScoreCard({ product }) {
   )
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="eco-card p-6"
-    >
+    <div className="eco-card p-6">
       {/* Product Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
@@ -54,13 +49,6 @@ export default function EcoScoreCard({ product }) {
           <p className="text-gray-600 text-sm">{product.brand || 'Unknown Brand'}</p>
           <p className="text-gray-500 text-xs mt-1">{product.category || 'Product'}</p>
         </div>
-        {product.image && (
-          <img
-            src={product.image}
-            alt={product.productName}
-            className="w-16 h-16 rounded-lg object-cover ml-4"
-          />
-        )}
       </div>
 
       {/* Main Eco Score */}
@@ -79,7 +67,7 @@ export default function EcoScoreCard({ product }) {
         
         {/* Score Description */}
         <p className="text-gray-700 text-sm max-w-md mx-auto">
-          {product.ecoDescription || getDefaultDescription(product.ecoScore)}
+          {product.ecoDescription || `This product has ${getScoreLabel(product.ecoScore).toLowerCase()} sustainability characteristics.`}
         </p>
       </div>
 
@@ -130,85 +118,60 @@ export default function EcoScoreCard({ product }) {
       </button>
 
       {/* Detailed Breakdown */}
-      <AnimatePresence>
-        {expanded && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mt-4 space-y-3"
-          >
-            <div className="border-t pt-4">
-              <h4 className="font-semibold text-gray-800 mb-3">Score Breakdown</h4>
-              
-              <ScoreBreakdown
-                title="Packaging"
-                score={product.packagingScore || 70}
-                icon={Recycle}
-                description="Material recyclability & sustainability"
-              />
-              
-              <ScoreBreakdown
-                title="Carbon Footprint"
-                score={product.carbonScore || 65}
-                icon={Leaf}
-                description="Production & transportation emissions"
-              />
-              
-              <ScoreBreakdown
-                title="Ingredients"
-                score={product.ingredientScore || 75}
-                icon={Heart}
-                description="Natural & organic content"
-              />
-              
-              <ScoreBreakdown
-                title="Certifications"
-                score={product.certificationScore || 80}
-                icon={Award}
-                description="Eco & health certifications"
-              />
-            </div>
+      {expanded && (
+        <div className="mt-4 space-y-3">
+          <div className="border-t pt-4">
+            <h4 className="font-semibold text-gray-800 mb-3">Score Breakdown</h4>
+            
+            <ScoreBreakdown
+              title="Packaging"
+              score={product.packagingScore || 70}
+              icon={Recycle}
+              description="Material recyclability & sustainability"
+            />
+            
+            <ScoreBreakdown
+              title="Carbon Footprint"
+              score={product.carbonScore || 65}
+              icon={Leaf}
+              description="Production & transportation emissions"
+            />
+            
+            <ScoreBreakdown
+              title="Ingredients"
+              score={product.ingredientScore || 75}
+              icon={Heart}
+              description="Natural & organic content"
+            />
+            
+            <ScoreBreakdown
+              title="Certifications"
+              score={product.certificationScore || 80}
+              icon={Award}
+              description="Eco & health certifications"
+            />
+          </div>
 
-            {/* Additional Information */}
-            {product.additionalInfo && (
-              <div className="border-t pt-4">
-                <h4 className="font-semibold text-gray-800 mb-2">Additional Information</h4>
-                <p className="text-sm text-gray-600">{product.additionalInfo}</p>
-              </div>
-            )}
-
-            {/* Improvement Tips */}
-            {product.improvementTips && (
-              <div className="border-t pt-4">
-                <h4 className="font-semibold text-gray-800 mb-2">💡 Improvement Tips</h4>
-                <ul className="space-y-1">
-                  {product.improvementTips.map((tip, index) => (
-                    <li key={index} className="text-sm text-gray-600 flex items-start">
-                      <span className="text-green-500 mr-2">•</span>
-                      {tip}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+          {/* Additional Information */}
+          <div className="border-t pt-4">
+            <h4 className="font-semibold text-gray-800 mb-2">💡 Eco Tips</h4>
+            <ul className="space-y-1">
+              <li className="text-sm text-gray-600 flex items-start">
+                <span className="text-green-500 mr-2">•</span>
+                Look for products with similar scores but better certifications
+              </li>
+              <li className="text-sm text-gray-600 flex items-start">
+                <span className="text-green-500 mr-2">•</span>
+                Consider the product's full lifecycle impact
+              </li>
+              <li className="text-sm text-gray-600 flex items-start">
+                <span className="text-green-500 mr-2">•</span>
+                Check if packaging can be recycled in your area
+              </li>
+            </ul>
+          </div>
+        </div>
+      )}
+    </div>
   )
-}
-
-// Default descriptions based on eco score
-function getDefaultDescription(score) {
-  if (score >= 80) {
-    return "This product has excellent sustainability credentials with minimal environmental impact."
-  }
-  if (score >= 60) {
-    return "This product has good eco-friendly features but could be improved in some areas."
-  }
-  if (score >= 40) {
-    return "This product has fair sustainability features with room for significant improvement."
-  }
-  return "This product has poor eco-friendly credentials and significant environmental impact."
 }
