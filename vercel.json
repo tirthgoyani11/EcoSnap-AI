@@ -1,12 +1,6 @@
 {
   "name": "ecosnap-ai",
   "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
-    }
-  ],
   "routes": [
     {
       "src": "/(.*)",
@@ -15,10 +9,5 @@
   ],
   "env": {
     "NODE_ENV": "production"
-  },
-  "functions": {
-    "pages/api/**/*.js": {
-      "maxDuration": 10
-    }
   }
 }
