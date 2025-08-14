@@ -1,260 +1,184 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 
-// Initialize Gemini with API key
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
-
-// Fallback data for demo purposes
-const demoProducts = {
-  'coca cola': {
-    productName: 'Coca-Cola Classic 12oz Can',
-    brand: 'Coca-Cola',
-    category: 'Beverages',
-    ecoScore: 32,
-    packagingScore: 45,
-    carbonScore: 25,
-    ingredientScore: 20,
-    certificationScore: 15,
-    recyclable: true,
-    co2Impact: 2.1,
-    healthScore: 25,
-    certifications: [],
-    ecoDescription: 'High sugar content and significant environmental impact from production and packaging.',
-    alternatives: [
-      {
-        name: 'Hint Water - Watermelon',
-        brand: 'Hint',
-        ecoScore: 85,
-        price: 1.99,
-        co2Impact: 0.3,
-        rating: 4.5,
-        whyBetter: 'Zero calories, natural flavoring, and aluminum packaging that\'s infinitely recyclable.',
-        benefits: ['Zero Sugar', 'Natural', 'Recyclable'],
-        improvements: { co2Reduction: 85, betterScore: 53 }
-      },
-      {
-        name: 'Spindrift Sparkling Water',
-        brand: 'Spindrift',
-        ecoScore: 78,
-        price: 1.49,
-        co2Impact: 0.5,
-        rating: 4.3,
-        whyBetter: 'Made with real fruit, no artificial ingredients, and sustainable packaging.',
-        benefits: ['Real Fruit', 'No Artificial Ingredients', 'BPA-Free'],
-        improvements: { co2Reduction: 76, betterScore: 46 }
-      },
-      {
-        name: 'JUST Water',
-        brand: 'JUST',
-        ecoScore: 82,
-        price: 2.49,
-        co2Impact: 0.2,
-        rating: 4.4,
-        whyBetter: 'Plant-based packaging, ethically sourced spring water, and carbon neutral shipping.',
-        benefits: ['Plant-Based Packaging', 'Spring Water', 'Carbon Neutral'],
-        improvements: { co2Reduction: 90, betterScore: 50 }
-      }
-    ]
-  },
-  'apple': {
-    productName: 'Organic Gala Apple',
-    brand: 'Local Farm',
-    category: 'Fresh Produce',
-    ecoScore: 92,
-    packagingScore: 95,
-    carbonScore: 88,
-    ingredientScore: 95,
-    certificationScore: 90,
-    recyclable: true,
-    co2Impact: 0.1,
-    healthScore: 95,
-    certifications: ['USDA Organic', 'Local'],
-    ecoDescription: 'Excellent eco-friendly choice with minimal packaging and local sourcing.',
-    alternatives: []
-  },
-  'plastic bottle': {
-    productName: 'Single-Use Plastic Water Bottle',
-    brand: 'Generic',
-    category: 'Beverages',
-    ecoScore: 15,
-    packagingScore: 10,
-    carbonScore: 20,
-    ingredientScore: 80,
-    certificationScore: 5,
-    recyclable: true,
-    co2Impact: 3.2,
-    healthScore: 75,
-    certifications: [],
-    ecoDescription: 'Poor environmental choice due to single-use plastic and high carbon footprint.',
-    alternatives: [
-      {
-        name: 'Hydro Flask Water Bottle',
-        brand: 'Hydro Flask',
-        ecoScore: 88,
-        price: 39.95,
-        co2Impact: 0.02,
-        rating: 4.8,
-        whyBetter: 'Reusable stainless steel construction eliminates single-use plastic waste.',
-        benefits: ['Reusable', 'Stainless Steel', 'Lifetime Use'],
-        improvements: { co2Reduction: 99, betterScore: 73 }
-      }
-    ]
-  }
-}
-
-const ecoScorePrompt = `
-Analyze this product image and provide an eco-friendly assessment. Return a JSON object with:
-
-{
-  "productName": "detected product name",
-  "brand": "brand name if visible",
-  "category": "product category",
-  "ecoScore": number 0-100 (overall eco-friendliness),
-  "packagingScore": number 0-100 (packaging recyclability/sustainability),
-  "carbonScore": number 0-100 (carbon footprint assessment),
-  "ingredientScore": number 0-100 (ingredient naturalness/health),
-  "certificationScore": number 0-100 (visible eco certifications),
-  "recyclable": boolean,
-  "co2Impact": estimated kg CO2 (number),
-  "healthScore": number 0-100,
-  "certifications": ["list of visible certifications"],
-  "ecoDescription": "brief explanation of eco rating",
-  "improvementTips": ["tip1", "tip2"],
-  "alternatives": [
-    {
-      "name": "alternative product name",
-      "brand": "brand name",
-      "ecoScore": number 0-100,
-      "price": estimated price,
-      "co2Impact": kg CO2,
-      "rating": 1-5 stars,
-      "whyBetter": "explanation why this is better",
-      "benefits": ["benefit1", "benefit2"],
-      "improvements": {"co2Reduction": percentage, "betterScore": points better}
-    }
-  ]
-}
-
-Focus on:
-- Packaging materials (plastic, glass, aluminum, cardboard)
-- Visible certifications (organic, fair trade, energy star, etc.)
-- Product type and typical environmental impact
-- Suggest 2-3 realistic eco-friendly alternatives
-- Be realistic with scores - very few products should score above 85
-`
-
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
   try {
-    const { image } = req.body
+    const { image, query } = req.body
 
-    if (!image) {
-      return res.status(400).json({ error: 'No image provided' })
+    if (!image && !query) {
+      return res.status(400).json({ error: 'Image data or query required' })
     }
 
-    // Convert base64 to format Gemini expects
-    const base64Data = image.replace(/^data:image\/[a-z]+;base64,/, '')
-    
-    try {
-      // Use Gemini 2.0 Flash for multimodal analysis
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
+    // Check if API key is available
+    const apiKey = process.env.GEMINI_API_KEY
+    if (!apiKey) {
+      // Return demo data if no API key
+      return getDemoResponse(query || 'product')
+    }
 
-      const imageParts = [{
-        inlineData: {
-          data: base64Data,
-          mimeType: 'image/jpeg'
-        }
-      }]
+    const genAI = new GoogleGenerativeAI(apiKey)
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
 
-      const result = await model.generateContent([ecoScorePrompt, ...imageParts])
-      const response = await result.response
-      let analysisText = response.text()
+    let prompt = `
+Analyze this product and provide a comprehensive eco-friendly assessment. Return the response in valid JSON format with the following structure:
 
-      // Clean up response to extract JSON
-      analysisText = analysisText.replace(/```json\n?|\n?```/g, '')
+{
+  "productName": "Product name",
+  "brand": "Brand name", 
+  "category": "Product category",
+  "ecoScore": 85,
+  "packagingScore": 90,
+  "carbonScore": 80,
+  "ingredientScore": 85,
+  "certificationScore": 75,
+  "recyclable": true,
+  "co2Impact": 1.2,
+  "healthScore": 88,
+  "certifications": ["USDA Organic", "Fair Trade"],
+  "ecoDescription": "Detailed explanation of environmental impact",
+  "alternatives": [
+    {
+      "name": "Alternative product name",
+      "brand": "Brand",
+      "ecoScore": 92,
+      "price": 15.99,
+      "co2Impact": 0.8,
+      "rating": 4.5,
+      "whyBetter": "Explanation of why it's better",
+      "benefits": ["Benefit 1", "Benefit 2"],
+      "improvements": {
+        "co2Reduction": 30,
+        "betterScore": 15
+      }
+    }
+  ]
+}
+
+Scoring guidelines:
+- ecoScore: Overall environmental impact (0-100, higher is better)
+- packagingScore: Sustainability of packaging materials
+- carbonScore: Carbon footprint consideration  
+- ingredientScore: Ingredient sustainability and sourcing
+- certificationScore: Environmental certifications
+- healthScore: Health impact of the product
+- co2Impact: Estimated CO2 impact in kg
+- All scores should be realistic and well-reasoned
+
+Focus on sustainability, environmental impact, packaging, carbon footprint, and suggest 1-3 better eco-friendly alternatives if applicable.
+`
+
+    let result
+    if (image) {
+      // Handle image analysis
+      const imageData = image.replace(/^data:image\/[a-z]+;base64,/, '')
       
-      let analysis
-      try {
-        analysis = JSON.parse(analysisText)
-      } catch (parseError) {
-        console.error('JSON Parse Error:', parseError)
-        // Fallback to demo data based on detected content
-        const detectedText = analysisText.toLowerCase()
-        
-        if (detectedText.includes('coca') || detectedText.includes('coke')) {
-          analysis = demoProducts['coca cola']
-        } else if (detectedText.includes('apple') || detectedText.includes('fruit')) {
-          analysis = demoProducts['apple']
-        } else if (detectedText.includes('bottle') || detectedText.includes('water')) {
-          analysis = demoProducts['plastic bottle']
-        } else {
-          // Generic fallback
-          analysis = {
-            productName: 'Unknown Product',
-            brand: 'Unknown',
-            category: 'General',
-            ecoScore: 50,
-            packagingScore: 50,
-            carbonScore: 50,
-            ingredientScore: 50,
-            certificationScore: 50,
-            recyclable: false,
-            co2Impact: 1.5,
-            healthScore: 50,
-            certifications: [],
-            ecoDescription: 'Product analysis unavailable. Try scanning a different angle or product.',
-            alternatives: []
+      const imageParts = [
+        {
+          inlineData: {
+            data: imageData,
+            mimeType: "image/jpeg"
           }
         }
+      ]
+      
+      result = await model.generateContent([prompt, ...imageParts])
+    } else {
+      // Handle text-based query
+      prompt += `\n\nAnalyze the product: "${query}"`
+      result = await model.generateContent(prompt)
+    }
+
+    const response = await result.response
+    let text = response.text()
+
+    // Clean up the response to extract JSON
+    text = text.replace(/```json\n?/, '').replace(/```\n?$/, '').trim()
+    
+    try {
+      const analysisData = JSON.parse(text)
+      
+      // Validate required fields and add defaults if missing
+      const validatedData = {
+        productName: analysisData.productName || 'Unknown Product',
+        brand: analysisData.brand || 'Unknown Brand',
+        category: analysisData.category || 'General',
+        ecoScore: Math.min(100, Math.max(0, analysisData.ecoScore || 50)),
+        packagingScore: Math.min(100, Math.max(0, analysisData.packagingScore || 50)),
+        carbonScore: Math.min(100, Math.max(0, analysisData.carbonScore || 50)),
+        ingredientScore: Math.min(100, Math.max(0, analysisData.ingredientScore || 50)),
+        certificationScore: Math.min(100, Math.max(0, analysisData.certificationScore || 0)),
+        recyclable: analysisData.recyclable ?? true,
+        co2Impact: Math.max(0, analysisData.co2Impact || 1.0),
+        healthScore: Math.min(100, Math.max(0, analysisData.healthScore || 70)),
+        certifications: Array.isArray(analysisData.certifications) ? analysisData.certifications : [],
+        ecoDescription: analysisData.ecoDescription || 'Environmental analysis not available.',
+        alternatives: Array.isArray(analysisData.alternatives) ? analysisData.alternatives : []
       }
 
-      // Ensure all required fields are present
-      analysis = {
-        productName: 'Unknown Product',
-        brand: 'Unknown',
-        category: 'General',
-        ecoScore: 50,
-        packagingScore: 50,
-        carbonScore: 50,
-        ingredientScore: 50,
-        certificationScore: 50,
-        recyclable: false,
-        co2Impact: 1.5,
-        healthScore: 50,
-        certifications: [],
-        ecoDescription: 'Analysis completed.',
-        alternatives: [],
-        ...analysis
-      }
-
-      res.status(200).json({
-        success: true,
-        result: analysis
-      })
-
-    } catch (geminiError) {
-      console.error('Gemini API Error:', geminiError)
-      
-      // Fallback to demo data
-      const randomProduct = Object.values(demoProducts)[Math.floor(Math.random() * Object.keys(demoProducts).length)]
-      
-      res.status(200).json({
-        success: true,
-        result: {
-          ...randomProduct,
-          productName: 'Demo Product (AI Offline)',
-          ecoDescription: 'Demo mode - Gemini API unavailable. This is sample data for testing.'
-        }
-      })
+      return res.status(200).json(validatedData)
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError, 'Raw text:', text)
+      // Return demo data if parsing fails
+      return getDemoResponse(query || 'product')
     }
 
   } catch (error) {
-    console.error('Vision API Error:', error)
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to analyze image' 
-    })
+    console.error('Vision API error:', error)
+    
+    // Return demo data as fallback
+    return getDemoResponse(req.body.query || 'product')
+  }
+}
+
+function getDemoResponse(query = 'product') {
+  const demoProducts = [
+    {
+      productName: query.includes('coca') || query.includes('cola') ? 'Coca-Cola Classic 12oz Can' : 
+                   query.includes('apple') ? 'Organic Gala Apple' :
+                   query.includes('phone') || query.includes('iphone') ? 'iPhone 15 Pro' :
+                   query.includes('water') ? 'Plastic Water Bottle' : 
+                   `${query} (Demo Analysis)`,
+      brand: query.includes('coca') ? 'Coca-Cola' : 
+             query.includes('apple') ? 'Local Farm' :
+             query.includes('phone') ? 'Apple' :
+             'Generic Brand',
+      category: query.includes('coca') || query.includes('water') ? 'Beverages' :
+                query.includes('apple') ? 'Fresh Produce' :
+                query.includes('phone') ? 'Electronics' : 'General',
+      ecoScore: Math.floor(Math.random() * 60) + 30,
+      packagingScore: Math.floor(Math.random() * 50) + 40,
+      carbonScore: Math.floor(Math.random() * 60) + 25,
+      ingredientScore: Math.floor(Math.random() * 40) + 50,
+      certificationScore: Math.floor(Math.random() * 30) + 10,
+      recyclable: Math.random() > 0.3,
+      co2Impact: Math.round((Math.random() * 3 + 0.5) * 10) / 10,
+      healthScore: Math.floor(Math.random() * 40) + 40,
+      certifications: Math.random() > 0.5 ? ['Demo Certification'] : [],
+      ecoDescription: `Demo analysis for "${query}". This is placeholder data. Add your GEMINI_API_KEY to .env.local for real AI-powered analysis.`,
+      alternatives: Math.random() > 0.4 ? [
+        {
+          name: `Eco-Friendly Alternative to ${query}`,
+          brand: 'EcoChoice',
+          ecoScore: Math.floor(Math.random() * 20) + 80,
+          price: Math.round((Math.random() * 20 + 10) * 100) / 100,
+          co2Impact: Math.round((Math.random() * 1.5 + 0.2) * 10) / 10,
+          rating: Math.round((Math.random() * 1 + 4) * 10) / 10,
+          whyBetter: 'More sustainable materials and production process.',
+          benefits: ['Sustainable', 'Lower Impact', 'Recyclable'],
+          improvements: {
+            co2Reduction: Math.floor(Math.random() * 40) + 20,
+            betterScore: Math.floor(Math.random() * 30) + 15
+          }
+        }
+      ] : []
+    }
+  ]
+
+  return {
+    status: 200,
+    json: (data) => Promise.resolve(demoProducts[0])
   }
 }
