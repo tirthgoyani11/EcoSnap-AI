@@ -1,348 +1,303 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState } from 'react'
 import Head from 'next/head'
-import Link from 'next/link'
-import { ArrowLeft, Send, MessageCircle, Lightbulb, Trash2 } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { MessageCircle, Send, Bot, User, Lightbulb, Recycle, Leaf, Globe } from 'lucide-react'
+
+const sampleQuestions = [
+  "How can I reduce my carbon footprint at home?",
+  "What are the best eco-friendly alternatives to plastic bags?",
+  "Is it better to buy local or organic food?",
+  "How do I properly recycle electronics?",
+  "What's the environmental impact of fast fashion?",
+  "How can I make my home more energy efficient?"
+]
+
+const sampleResponses = [
+  {
+    question: "carbon footprint",
+    response: "Great question! Here are some effective ways to reduce your carbon footprint at home:\n\n🏠 **Energy Use:**\n• Switch to LED bulbs (use 75% less energy)\n• Unplug devices when not in use\n• Use a programmable thermostat\n• Consider renewable energy sources\n\n🚗 **Transportation:**\n• Walk, bike, or use public transport\n• Combine errands into one trip\n• Work from home when possible\n• Consider electric or hybrid vehicles\n\n♻️ **Consumption:**\n• Buy less, choose quality items\n• Repair instead of replacing\n• Choose local and seasonal products\n• Reduce meat consumption\n\nEven small changes can make a big difference! Which area would you like to focus on first?"
+  },
+  {
+    question: "plastic bags",
+    response: "Excellent question! Here are the best eco-friendly alternatives to plastic bags:\n\n🛍️ **Reusable Options:**\n• **Cotton canvas bags** - Durable and washable\n• **Jute bags** - Biodegradable and strong\n• **Recycled PET bags** - Made from recycled plastic bottles\n• **Mesh produce bags** - Perfect for fruits and vegetables\n\n📦 **Other Alternatives:**\n• **Paper bags** - Biodegradable but less durable\n• **Cardboard boxes** - Great for bulk items\n• **Basket or cart** - For regular shopping trips\n\n💡 **Pro Tips:**\n• Keep reusable bags in your car or by your door\n• Choose bags with longer handles for comfort\n• Look for foldable options that fit in your purse\n• One reusable bag can replace 1000+ plastic bags!\n\nThe key is remembering to bring them - maybe set a phone reminder until it becomes habit!"
+  },
+  {
+    question: "local or organic",
+    response: "This is a nuanced question! Both local and organic have environmental benefits:\n\n🌱 **Organic Benefits:**\n• No synthetic pesticides or fertilizers\n• Better for soil health and biodiversity\n• Often better for farmworker safety\n• Supports sustainable farming practices\n\n🚚 **Local Benefits:**\n• Reduced transportation emissions\n• Supports local economy\n• Fresher produce (picked closer to peak ripeness)\n• Often seasonal and varied\n\n🏆 **The Winner?**\n**Local organic is ideal**, but if you must choose:\n• **Local conventional** often beats **distant organic** for carbon footprint\n• **Organic** is better for avoiding pesticides and supporting biodiversity\n• **Seasonal local** reduces need for energy-intensive greenhouses\n\n💡 **Best Strategy:**\n1. Prioritize local and seasonal\n2. Buy organic for the \"Dirty Dozen\" (highest pesticide foods)\n3. Support local farmers markets when possible\n4. Grow your own herbs and simple vegetables\n\nWhat type of food are you most interested in sourcing sustainably?"
+  }
+]
 
 export default function AskAnything() {
   const [messages, setMessages] = useState([
     {
       id: 1,
       type: 'bot',
-      content: '👋 Hi! I\'m your eco-friendly AI assistant. Ask me anything about sustainable living, product alternatives, or environmental impact!',
+      content: "Hi! I'm your eco-assistant. Ask me anything about sustainability, environmental impact, eco-friendly alternatives, or green living tips. I'm here to help you make more environmentally conscious choices! 🌱",
       timestamp: new Date().toISOString()
     }
   ])
   const [inputMessage, setInputMessage] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const messagesEndRef = useRef(null)
-  const inputRef = useRef(null)
+  const [isTyping, setIsTyping] = useState(false)
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  const generateResponse = (question) => {
+    const lowerQuestion = question.toLowerCase()
+    
+    // Find matching sample response
+    const matchedResponse = sampleResponses.find(sample => 
+      lowerQuestion.includes(sample.question)
+    )
+    
+    if (matchedResponse) {
+      return matchedResponse.response
+    }
+    
+    // General eco responses based on keywords
+    if (lowerQuestion.includes('recycle') || lowerQuestion.includes('recycling')) {
+      return "♻️ **Recycling Tips:**\n\n• **Electronics**: Take to certified e-waste centers, never throw in regular trash\n• **Plastic**: Check numbers 1-2 are widely accepted, clean containers first\n• **Glass**: Most types accepted, remove lids and rings\n• **Paper**: Remove staples and plastic windows\n• **Batteries**: Special drop-off locations at most stores\n\n💡 **Pro tip**: When in doubt, check your local recycling center's website for specific guidelines. Contamination can spoil entire batches of recyclables!\n\nWhat specific items do you need help recycling?"
+    }
+    
+    if (lowerQuestion.includes('energy') || lowerQuestion.includes('electric')) {
+      return "⚡ **Energy Efficiency Tips:**\n\n🏠 **Home Improvements:**\n• Seal air leaks around windows and doors\n• Add insulation to attic and walls\n• Upgrade to ENERGY STAR appliances\n• Install smart thermostats\n\n💡 **Daily Habits:**\n• Use cold water for washing clothes\n• Air dry instead of using the dryer\n• Turn off lights and unplug devices\n• Use natural light during the day\n\n🌞 **Renewable Options:**\n• Solar panels (check for local incentives)\n• Community solar programs\n• Green energy from your utility company\n\nWhich area would you like to explore further?"
+    }
+    
+    if (lowerQuestion.includes('water') || lowerQuestion.includes('conservation')) {
+      return "💧 **Water Conservation Ideas:**\n\n🚿 **Bathroom (70% of home water use):**\n• Take shorter showers (save 2.5 gallons per minute)\n• Fix leaks promptly\n• Install low-flow showerheads and toilets\n• Turn off tap while brushing teeth\n\n🍽️ **Kitchen & Laundry:**\n• Only run full loads in dishwasher/washing machine\n• Use cold water when possible\n• Collect rinse water for plants\n• Install aerators on faucets\n\n🌱 **Outdoor:**\n• Water early morning or evening\n• Use drip irrigation or soaker hoses\n• Plant native, drought-resistant species\n• Collect rainwater in barrels\n\nWhat's your biggest water use area you'd like to improve?"
+    }
+    
+    if (lowerQuestion.includes('food') || lowerQuestion.includes('diet') || lowerQuestion.includes('eating')) {
+      return "🍎 **Sustainable Food Choices:**\n\n🌱 **Plant-Forward Diet:**\n• Reduce meat consumption (even one day/week helps!)\n• Try plant-based proteins: beans, lentils, tofu\n• Eat seasonal, local produce when possible\n• Minimize processed and packaged foods\n\n🗑️ **Reduce Food Waste:**\n• Plan meals and make shopping lists\n• Store food properly to extend freshness\n• Use leftovers creatively\n• Compost food scraps\n\n📦 **Packaging:**\n• Shop at farmers markets with reusable bags\n• Buy in bulk to reduce packaging\n• Choose glass or paper over plastic when possible\n• Support brands with sustainable packaging\n\nWhat aspect of sustainable eating interests you most?"
+    }
+    
+    // Default responses for general questions
+    const defaultResponses = [
+      "That's a great eco-conscious question! While I don't have specific data on that topic, I'd recommend checking with local environmental organizations or sustainability websites for the most current information. In general, focusing on reducing consumption, reusing items, and recycling properly are excellent starting points for any environmental concern.",
+      
+      "I appreciate your interest in sustainable living! For specific guidance on that topic, I'd suggest consulting resources like the EPA's website, local environmental groups, or sustainability-focused apps. Remember that small, consistent actions often have more impact than perfect but unsustainable changes.",
+      
+      "Environmental consciousness is so important! While I don't have detailed information on that specific question, some universal eco-friendly principles include: buying less but better quality items, choosing local when possible, reducing energy and water usage, and supporting businesses with strong environmental commitments. What specific area would you like to focus on?"
+    ]
+    
+    return defaultResponses[Math.floor(Math.random() * defaultResponses.length)]
   }
 
-  useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim()) return
 
-  // Sample questions for quick start
-  const sampleQuestions = [
-    "What makes a product eco-friendly?",
-    "How can I reduce my carbon footprint?",
-    "What are the best sustainable alternatives to plastic?",
-    "How do I read eco certifications on products?",
-    "What's the difference between recyclable and biodegradable?",
-    "How can I make my daily routine more sustainable?"
-  ]
-
-  const handleSendMessage = async (messageText = inputMessage) => {
-    if (!messageText.trim()) return
-
-    const userMessage = {
+    const newMessage = {
       id: Date.now(),
       type: 'user',
-      content: messageText.trim(),
+      content: inputMessage,
       timestamp: new Date().toISOString()
     }
 
-    setMessages(prev => [...prev, userMessage])
+    setMessages(prev => [...prev, newMessage])
+    const currentQuestion = inputMessage
     setInputMessage('')
-    setIsLoading(true)
+    setIsTyping(true)
 
     try {
+      // Call the real chat API
       const response = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: messageText.trim() })
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: currentQuestion,
+          conversationHistory: messages.slice(-6) // Send last 6 messages for context
+        })
       })
 
-      const data = await response.json()
+      if (!response.ok) {
+        throw new Error('Chat API failed')
+      }
 
-      if (data.success) {
-        const botMessage = {
-          id: Date.now() + 1,
-          type: 'bot',
-          content: data.response,
-          timestamp: new Date().toISOString()
-        }
-        setMessages(prev => [...prev, botMessage])
-        
-        // Award points for asking questions
+      const data = await response.json()
+      const botMessage = {
+        id: Date.now() + 1,
+        type: 'bot',
+        content: data.response,
+        timestamp: new Date().toISOString()
+      }
+      
+      setMessages(prev => [...prev, botMessage])
+      
+      // Award points for asking questions
+      if (typeof window !== 'undefined') {
         const currentPoints = parseInt(localStorage.getItem('ecoPoints') || '0')
-        localStorage.setItem('ecoPoints', (currentPoints + 2).toString())
-      } else {
-        throw new Error(data.error || 'Failed to get response')
+        localStorage.setItem('ecoPoints', (currentPoints + 1).toString())
       }
     } catch (error) {
       console.error('Chat error:', error)
       
-      // Fallback with predefined responses
-      const fallbackResponse = getFallbackResponse(messageText)
+      // Fallback to demo response
+      const response = generateResponse(currentQuestion)
       const botMessage = {
         id: Date.now() + 1,
         type: 'bot',
-        content: fallbackResponse,
+        content: response,
         timestamp: new Date().toISOString()
       }
+      
       setMessages(prev => [...prev, botMessage])
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const getFallbackResponse = (question) => {
-    const lowerQuestion = question.toLowerCase()
-    
-    if (lowerQuestion.includes('plastic') || lowerQuestion.includes('alternative')) {
-      return `🌱 Great question about plastic alternatives! Here are some sustainable swaps:
-
-• **Water bottles** → Stainless steel or glass bottles
-• **Shopping bags** → Canvas, jute, or mesh bags  
-• **Food containers** → Glass or bamboo containers
-• **Straws** → Metal, bamboo, or paper straws
-• **Packaging** → Look for cardboard, paper, or compostable materials
-
-The key is choosing reusable, durable materials that can replace single-use plastics. Start with one swap at a time!`
-    }
-    
-    if (lowerQuestion.includes('carbon') || lowerQuestion.includes('footprint')) {
-      return `🌍 Here are effective ways to reduce your carbon footprint:
-
-**Transportation:**
-• Walk, bike, or use public transport
-• Combine errands into one trip
-• Work from home when possible
-
-**Energy:**
-• Switch to LED bulbs
-• Unplug devices when not in use
-• Use programmable thermostats
-
-**Food:**
-• Eat less meat, more plants
-• Buy local and seasonal produce
-• Reduce food waste
-
-**Shopping:**
-• Buy only what you need
-• Choose quality items that last
-• Support sustainable brands
-
-Every small change adds up to make a big difference! 🌱`
-    }
-    
-    if (lowerQuestion.includes('eco-friendly') || lowerQuestion.includes('sustainable')) {
-      return `♻️ A product is eco-friendly when it:
-
-**Materials:** Made from renewable, recycled, or biodegradable materials
-**Production:** Uses clean energy and sustainable processes
-**Packaging:** Minimal, recyclable, or compostable packaging
-**Durability:** Built to last, reducing replacement needs
-**End-of-life:** Can be recycled, composted, or safely disposed
-
-**Look for certifications:**
-• Energy Star (appliances)
-• USDA Organic (food)
-• Forest Stewardship Council (paper)
-• Fair Trade (various products)
-• Cradle to Cradle (overall sustainability)
-
-Remember: the most eco-friendly product is often the one you don't need to buy! 🌿`
-    }
-    
-    if (lowerQuestion.includes('certification') || lowerQuestion.includes('label')) {
-      return `🏆 Here's how to decode eco certifications:
-
-**Energy Star** ⭐ - Energy efficient appliances
-**USDA Organic** 🌱 - No synthetic pesticides/fertilizers  
-**Fair Trade** 🤝 - Ethical labor practices
-**Forest Stewardship Council (FSC)** 🌳 - Sustainable forestry
-**Cradle to Cradle** ♻️ - Circular design principles
-**Green Seal** ✅ - Environmental standards met
-**EPEAT** 💻 - Sustainable electronics
-
-**Red flags to watch for:**
-• Vague terms like "natural" or "eco" without certification
-• Green imagery without substance (greenwashing)
-• Claims that are too good to be true
-
-When in doubt, research the certification body and their standards!`
-    }
-    
-    return `🤖 I understand you're asking about "${question}". While I don't have a specific answer right now, here are some general eco-friendly tips:
-
-• **Reduce** consumption when possible
-• **Reuse** items creatively  
-• **Recycle** properly according to local guidelines
-• **Research** before buying - look for sustainable certifications
-• **Repair** instead of replacing when feasible
-
-For more specific advice, try rephrasing your question or check out reputable environmental websites like EPA.gov or Earth911.com! 
-
-Is there a particular aspect of sustainability you'd like to explore further? 🌱`
-  }
-
-  const clearChat = () => {
-    setMessages([
-      {
-        id: 1,
-        type: 'bot',
-        content: '👋 Hi! I\'m your eco-friendly AI assistant. Ask me anything about sustainable living, product alternatives, or environmental impact!',
-        timestamp: new Date().toISOString()
+      
+      // Award points anyway
+      if (typeof window !== 'undefined') {
+        const currentPoints = parseInt(localStorage.getItem('ecoPoints') || '0')
+        localStorage.setItem('ecoPoints', (currentPoints + 1).toString())
       }
-    ])
+    } finally {
+      setIsTyping(false)
+    }
   }
 
-  const Message = ({ message }) => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} mb-4`}
-    >
-      <div className={`max-w-[80%] p-4 rounded-lg ${
-        message.type === 'user' 
-          ? 'bg-green-500 text-white ml-4' 
-          : 'bg-white border shadow-sm mr-4'
-      }`}>
-        {message.type === 'bot' && (
-          <div className="flex items-center mb-2">
-            <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center mr-2">
-              <span className="text-white text-sm">🤖</span>
-            </div>
-            <span className="text-sm font-medium text-gray-600">EcoBot</span>
-          </div>
-        )}
-        <div className="whitespace-pre-line leading-relaxed">
-          {message.content}
-        </div>
-        <div className={`text-xs mt-2 opacity-75 ${
-          message.type === 'user' ? 'text-white' : 'text-gray-500'
-        }`}>
-          {new Date(message.timestamp).toLocaleTimeString([], { 
-            hour: '2-digit', 
-            minute: '2-digit' 
-          })}
-        </div>
-      </div>
-    </motion.div>
-  )
+  const handleQuickQuestion = (question) => {
+    setInputMessage(question)
+  }
+
+  const formatMessage = (content) => {
+    return content.split('\n').map((line, index) => (
+      <span key={index}>
+        {line}
+        {index < content.split('\n').length - 1 && <br />}
+      </span>
+    ))
+  }
 
   return (
-    <div className="min-h-screen eco-gradient flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
       <Head>
         <title>Ask Anything - EcoSnap AI</title>
+        <meta name="description" content="Ask questions about sustainability and eco-friendly living" />
       </Head>
 
-      {/* Header */}
-      <header className="p-4 flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <Link href="/">
-              <button className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors">
-                <ArrowLeft className="text-white" size={20} />
-              </button>
-            </Link>
-            <h1 className="text-white text-xl font-bold">Ask EcoBot Anything</h1>
-          </div>
-          <button
-            onClick={clearChat}
-            className="p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
-            title="Clear chat"
-          >
-            <Trash2 className="text-white" size={16} />
-          </button>
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-800 mb-4">
+            <MessageCircle className="inline mr-3" size={40} />
+            Ask Anything
+          </h1>
+          <p className="text-xl text-gray-600">Your AI sustainability assistant</p>
         </div>
-      </header>
 
-      {/* Messages Container */}
-      <main className="flex-1 px-4 pb-4 overflow-hidden">
-        <div className="h-full eco-card p-4 flex flex-col">
-          
-          {/* Sample Questions */}
-          {messages.length === 1 && (
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
-                <Lightbulb className="mr-2 text-yellow-500" size={20} />
-                Try asking about:
-              </h3>
-              <div className="grid gap-2">
-                {sampleQuestions.map((question, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handleSendMessage(question)}
-                    className="text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors text-sm"
-                  >
-                    <MessageCircle className="inline mr-2 text-green-500" size={16} />
-                    {question}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto space-y-2 mb-4">
-            <AnimatePresence>
-              {messages.map((message) => (
-                <Message key={message.id} message={message} />
-              ))}
-            </AnimatePresence>
-            
-            {/* Loading indicator */}
-            {isLoading && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex justify-start mb-4"
+        {/* Quick Questions */}
+        <div className="mb-8">
+          <h3 className="text-lg font-semibold mb-4">💡 Popular Questions</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {sampleQuestions.map((question, index) => (
+              <button
+                key={index}
+                onClick={() => handleQuickQuestion(question)}
+                className="text-left p-3 bg-white rounded-lg border border-gray-200 hover:border-green-300 hover:bg-green-50 transition-colors"
               >
-                <div className="bg-white border shadow-sm p-4 rounded-lg mr-4">
-                  <div className="flex items-center space-x-2">
-                    <div className="eco-spinner" />
-                    <span className="text-gray-600">Thinking...</span>
+                <span className="text-gray-600">{question}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Chat Messages */}
+        <div className="eco-card mb-4" style={{ height: '500px', overflow: 'hidden' }}>
+          <div className="p-4 h-full flex flex-col">
+            <div className="flex-1 overflow-y-auto space-y-4 mb-4">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div className={`flex items-start space-x-3 max-w-3xl ${message.type === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                    <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                      message.type === 'user' 
+                        ? 'bg-blue-500 text-white' 
+                        : 'bg-green-500 text-white'
+                    }`}>
+                      {message.type === 'user' ? <User size={16} /> : <Bot size={16} />}
+                    </div>
+                    <div className={`rounded-lg p-4 ${
+                      message.type === 'user'
+                        ? 'bg-blue-100 text-gray-800'
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      <div className="text-sm">
+                        {formatMessage(message.content)}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-2">
+                        {new Date(message.timestamp).toLocaleTimeString()}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </motion.div>
-            )}
-            
-            <div ref={messagesEndRef} />
-          </div>
+              ))}
+              
+              {/* Typing indicator */}
+              {isTyping && (
+                <div className="flex justify-start">
+                  <div className="flex items-start space-x-3 max-w-3xl">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center">
+                      <Bot size={16} />
+                    </div>
+                    <div className="rounded-lg p-4 bg-gray-100">
+                      <div className="flex space-x-1">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
 
-          {/* Input */}
-          <div className="flex-shrink-0">
-            <form 
-              onSubmit={(e) => {
-                e.preventDefault()
-                handleSendMessage()
-              }}
-              className="flex space-x-2"
-            >
-              <input
-                ref={inputRef}
-                type="text"
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                placeholder="Ask about eco-friendly products, sustainability tips, or anything green..."
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                disabled={isLoading}
-              />
-              <button
-                type="submit"
-                disabled={!inputMessage.trim() || isLoading}
-                className="eco-button px-6 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Send size={16} />
-              </button>
-            </form>
-            
-            <div className="text-center mt-2">
-              <span className="text-xs text-gray-500">
-                💡 Tip: Be specific in your questions for better answers!
-              </span>
+            {/* Message Input */}
+            <div className="border-t pt-4">
+              <div className="flex space-x-2">
+                <input
+                  type="text"
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  placeholder="Ask about sustainability, recycling, energy saving..."
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  disabled={isTyping}
+                />
+                <button
+                  onClick={handleSendMessage}
+                  disabled={!inputMessage.trim() || isTyping}
+                  className="eco-button disabled:opacity-50 px-4 py-2"
+                >
+                  <Send size={20} />
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </main>
+
+        {/* Help Sections */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="eco-card p-6 text-center">
+            <Leaf className="w-12 h-12 text-green-500 mx-auto mb-4" />
+            <h3 className="font-semibold mb-2">Sustainability Tips</h3>
+            <p className="text-sm text-gray-600">
+              Get personalized advice on reducing your environmental impact
+            </p>
+          </div>
+          
+          <div className="eco-card p-6 text-center">
+            <Recycle className="w-12 h-12 text-blue-500 mx-auto mb-4" />
+            <h3 className="font-semibold mb-2">Recycling Guidance</h3>
+            <p className="text-sm text-gray-600">
+              Learn how to properly dispose of and recycle different materials
+            </p>
+          </div>
+          
+          <div className="eco-card p-6 text-center">
+            <Globe className="w-12 h-12 text-purple-500 mx-auto mb-4" />
+            <h3 className="font-semibold mb-2">Environmental Impact</h3>
+            <p className="text-sm text-gray-600">
+              Understand the environmental effects of everyday choices
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
