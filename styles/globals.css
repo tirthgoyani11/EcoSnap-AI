@@ -21,6 +21,7 @@
     border: 2px solid #22c55e;
     border-radius: 12px;
     overflow: hidden;
+    aspect-ratio: 16 / 9;
   }
   
   .scanner-overlay {
@@ -52,47 +53,42 @@
     font-weight: 600;
     backdrop-filter: blur(8px);
     animation: float 3s ease-in-out infinite;
+    z-index: 10;
   }
 }
 
 @keyframes scanline {
-  0%, 100% { transform: translateY(-100%); }
-  50% { transform: translateY(100vh); }
+  0%, 100% { 
+    transform: translateY(-100%); 
+    opacity: 0;
+  }
+  50% { 
+    transform: translateY(100%); 
+    opacity: 1;
+  }
 }
 
-/* Mobile-first responsive design */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+/* Mobile responsive */
 @media (max-width: 768px) {
-  .mobile-scanner {
-    height: 60vh;
-    width: 100vw;
-  }
-  
-  .mobile-controls {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: rgba(0, 0, 0, 0.9);
-    padding: 20px;
-    border-top-left-radius: 20px;
-    border-top-right-radius: 20px;
+  .scanner-frame {
+    aspect-ratio: 4 / 3;
   }
 }
-
-/* Eco score indicator colors */
-.eco-score-excellent { @apply text-green-600 bg-green-100; }
-.eco-score-good { @apply text-green-500 bg-green-50; }
-.eco-score-fair { @apply text-yellow-600 bg-yellow-100; }
-.eco-score-poor { @apply text-red-600 bg-red-100; }
 
 /* Loading spinner */
 .eco-spinner {
   border: 3px solid rgba(34, 197, 94, 0.3);
   border-radius: 50%;
   border-top: 3px solid #22c55e;
-  width: 40px;
-  height: 40px;
+  width: 24px;
+  height: 24px;
   animation: spin 1s linear infinite;
+  display: inline-block;
 }
 
 @keyframes spin {
